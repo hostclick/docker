@@ -1,0 +1,11 @@
+- name: Install docker
+  yum: name=docker state=present
+
+- name: Register device-mapper-event-libs version
+  shell: rpm -qa | grep device-mapper-event-libs | cut -d'-' -f5
+  register: device_mapper_version
+  changed_when: false
+
+- name: Update device mapper to avoid errors on docker start
+  yum: name=device-mapper-event-libs state=latest
+  when: "{{ device_mapper_version.stdout | version_compare('1.02.93', '<') }}"

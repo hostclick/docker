@@ -1,0 +1,77 @@
+---
+# tasks file for provisioning
+
+- name: Install Pip
+  yum: name=python-pip state=latest
+
+- name: Install Docker Python library
+  pip: name=docker-py state=latest
+
+- name: Copy files required by Dockerfile
+  copy: src={{ docker_images_src_path }}/{{ item.name }} dest={{ docker_images_dst_path }}/
+  with_items: docker_images
+  register: files_copied
+
+- name: Copy common files required by Dockerfile
+  template: src={{ item.1 }}.j2 dest={{ docker_images_dst_path }}/{{ item.0.name }}/{{ item.1 }}
+  with_nested:
+    - docker_images
+    - docker_images_common_files
+
+- name: Create Dockerfiles
+  template: src=Dockerfile.j2 dest={{ docker_images_dst_path }}/{{ item.name }}/Dockerfile
+  with_items: docker_images
+  register: dockerfile
+
+- name: Build docker images
+  docker_image: path="{{ docker_images_dst_path }}/{{ item.name }}" name="{{ item.name }}" nocache="{{ item.nocache | default(omit) }}" state=present
+  with_items: docker_images
+  register: first_build
+  
+- name: Create docker data volumes
+  docker: 
+    name: "{{ item.name }}"
+    image: "{{ item.image | default('busybox') }}"
+    state: present 
+    volumes: "{{ item.volumes }}"
+  with_items: docker_data_volumes
+  when: docker_data_volumes is defined
+
+- name: Stop docker containers
+  docker: image={{ item.0.name }} command="{{ item.0.command }}" state=absent
+  with_together: 
+    - docker_images
+    - files_copied.results
+    - dockerfile.results
+    - first_build.results
+  when: (item.1.changed or item.2.changed) and not item.3.changed
+  register: container_stop
+
+- name: Remove old docker images
+  docker_image: name="{{ item.0.name }}" state=absent
+  with_together:
+    - docker_images
+    - container_stop.results
+  when: item.1.changed
+  register: image_remove
+
+- name: Rebuild docker images
+  docker_image: path="{{ docker_images_dst_path }}/{{ item.0.name }}" name="{{ item.0.name }}" nocache="{{ item.nocache | default(omit) }}" state=build
+  with_together:
+    - docker_images
+    - image_remove.results
+  when: item.1.changed and not item.1.failed
+
+- name: Start docker containers
+  docker: 
+    image: "{{ item.name }}" 
+    command: "{{ item.command }}" 
+    ports: "{{ item.ports | default(omit) }}" 
+    expose: "{{ item.expose | default(omit) }}" 
+    volumes: "{{ item.volumes | default(omit) }}"
+    volumes_from: "{{ item.volumes_from | default(omit) }}" 
+    state: reloaded 
+    restart_policy: "{{ item.restart_policy | default('always') }}" 
+    restart_policy_retry: "{{ item.restart_policy_retry | default('1') }}"
+  with_items: docker_images
+  register: docker_containers

@@ -1,0 +1,5 @@
+- name: Ensure docker (tray icon package) is absent
+  yum: name=docker state=absent
+  
+- name: Install docker-io
+  yum: name=docker-io state=present enablerepo=epel-testing

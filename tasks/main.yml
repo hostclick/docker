@@ -1,0 +1,20 @@
+---
+# tasks file for docker
+- action: setup
+  tags: docker
+
+- include: CentOS6.yml
+  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "6"
+  tags: docker
+
+- include: CentOS7.yml
+  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+  tags: docker
+
+- name: Ensure docker daemon is started and enabled
+  service: name=docker state=started enabled=yes
+  tags: docker
+
+- include: images.yml
+  when: docker_images is defined
+  tags: docker

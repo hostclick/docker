@@ -1,0 +1,12 @@
+---
+# defaults file for docker
+
+#Source image path (must be defined)
+#docker_images_src_path: 
+
+#Dest image path
+docker_images_dst_path: /home
+
+docker_images_common_files:
+  - ansible.cfg
+  - hosts

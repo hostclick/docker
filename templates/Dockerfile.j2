@@ -1,0 +1,8 @@
+FROM hostclick/centos6-ansible:stable
+
+RUN rm -rf /etc/ansible/*
+COPY . /etc/ansible/
+WORKDIR /etc/ansible
+RUN ansible-galaxy install -r requeriments.txt && \
+	ansible-playbook site.yml && \
+	rm -rf /etc/ansible/*
