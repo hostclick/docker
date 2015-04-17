@@ -73,5 +73,6 @@
     state: reloaded 
     restart_policy: "{{ item.restart_policy | default('always') }}" 
     restart_policy_retry: "{{ item.restart_policy_retry | default('1') }}"
+    memory_limit: "{{ item.memory_limit | default(omit) }}"
   with_items: docker_images
   register: docker_containers
