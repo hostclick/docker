@@ -6,7 +6,12 @@
 
 # Incompatible with docker-py 1.2 (https://github.com/ansible/ansible/issues/10879)
 - name: Install Docker Python library
-  pip: name=docker-py version=1.1.0
+  pip: name={{ item.name }} version={{ item.version }} state=present
+  with_items:
+    - name: docker-py
+      version: 1.1.0
+    - name: six
+      version: 1.9.0
 
 - name: Copy files required by Dockerfile
   copy: src={{ docker_images_src_path }}/{{ item.name }} dest={{ docker_images_dst_path }}/
